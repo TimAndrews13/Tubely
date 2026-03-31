@@ -55,7 +55,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 	//Parse Media Type from header response
 	mediaType, _, _ := mime.ParseMediaType(mediaInfo)
-	if mediaType != "image/png" || mediaType != "image/jpeg" {
+	if mediaType != "image/png" && mediaType != "image/jpeg" {
 		respondWithError(w, http.StatusBadRequest, "file type must be an image for thumbnail", nil)
 		return
 	}
@@ -76,7 +76,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	//Create Unique File Path for File Image to be written to /assets folder
 	fileExtension := strings.Split(mediaInfo, "/")[1]
 
-	discPath := filepath.Join(cfg.assetsRoot, fmt.Sprintf("%s.%s", videoIDString, &fileExtension))
+	discPath := filepath.Join(cfg.assetsRoot, fmt.Sprintf("%s.%s", videoIDString, fileExtension))
 	//Get URL and Store in the Video at ThumbnailURL
 	fileURL := fmt.Sprintf("http://localhost:%s/assets/%s.%s", os.Getenv("PORT"), videoIDString, fileExtension)
 
