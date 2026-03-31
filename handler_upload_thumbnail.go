@@ -23,18 +23,6 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	//Create Random 32 byte slice and convert to random base64 string
-	b := make([]byte, 32)
-	n, err := rand.Read(b)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "error creating random file sting", err)
-		return
-	}
-	if n != 32 {
-		respondWithError(w, http.StatusInternalServerError, "error creating random file sting, bytes not equal to 32", err)
-	}
-	encodedString := base64.RawURLEncoding.EncodeToString(b)
-
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Couldn't find JWT", err)
@@ -87,10 +75,20 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	//Create Random 32 byte slice and convert to random base64 string
+	b := make([]byte, 32)
+	_, err = rand.Read(b)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error creating random file sting", err)
+		return
+	}
+	encodedString := base64.RawURLEncoding.EncodeToString(b)
+
 	//Create Unique File Path for File Image to be written to /assets folder
 	fileExtension := strings.Split(mediaInfo, "/")[1]
 
 	discPath := filepath.Join(cfg.assetsRoot, fmt.Sprintf("%s.%s", encodedString, fileExtension))
+
 	//Get URL and Store in the Video at ThumbnailURL
 	fileURL := fmt.Sprintf("http://localhost:%s/assets/%s.%s", os.Getenv("PORT"), encodedString, fileExtension)
 
