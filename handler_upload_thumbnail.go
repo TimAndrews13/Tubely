@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -47,9 +48,15 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	defer file.Close()
 
 	//Get Media Type from Content-Type Header
-	mediaType := header.Header.Get("Content-Type")
-	if mediaType == "" {
+	mediaInfo := header.Header.Get("Content-Type")
+	if mediaInfo == "" {
 		respondWithError(w, http.StatusBadRequest, "Missing Content-Type Header", nil)
+		return
+	}
+	//Parse Media Type from header response
+	mediaType, _, _ := mime.ParseMediaType(mediaInfo)
+	if mediaType != "image/png" || mediaType != "image/jpeg" {
+		respondWithError(w, http.StatusBadRequest, "file type must be an image for thumbnail", nil)
 		return
 	}
 
@@ -67,7 +74,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 
 	//Create Unique File Path for File Image to be written to /assets folder
-	fileExtension := strings.Split(mediaType, "/")[1]
+	fileExtension := strings.Split(mediaInfo, "/")[1]
 
 	discPath := filepath.Join(cfg.assetsRoot, fmt.Sprintf("%s.%s", videoIDString, &fileExtension))
 	//Get URL and Store in the Video at ThumbnailURL
