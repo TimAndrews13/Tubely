@@ -87,13 +87,16 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	//get Aspect Ratio of the Video file from temp file
+	aspectRatio, err := getVideoAspectRatio(f.Name())
+
 	//Rest Temp Files Pointer
 	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "error resetting file pointer", err)
 	}
 
-	//Create Random 32 byte slice and conver to random base64 string
+	//Create Random 32 byte slice and convert to hex encoded string
 	b := make([]byte, 32)
 	_, err = rand.Read(b)
 	if err != nil {
@@ -104,7 +107,14 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	//Get file Extentsio
 	fileExtension := strings.Split(media, "/")[1]
 	//Set File Key
-	fileKey := fmt.Sprintf("%s.%s", encodedString, fileExtension)
+	var fileKey string
+	if aspectRatio == "16:9" {
+		fileKey = fmt.Sprintf("landscape/%s.%s", encodedString, fileExtension)
+	} else if aspectRatio == "9:16" {
+		fileKey = fmt.Sprintf("portrait/%s.%s", encodedString, fileExtension)
+	} else if aspectRatio == "other" {
+		fileKey = fmt.Sprintf("other/%s.%s", encodedString, fileExtension)
+	}
 
 	//Put video onto s3
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
