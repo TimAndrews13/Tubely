@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"mime"
 	"net/http"
 	"os"
@@ -89,12 +90,26 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	//get Aspect Ratio of the Video file from temp file
 	aspectRatio, err := getVideoAspectRatio(f.Name())
-
-	//Rest Temp Files Pointer
-	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "error resetting file pointer", err)
+		respondWithError(w, http.StatusInternalServerError, "error getting aspect ratio", err)
+		return
 	}
+
+	//create processed version of the video
+	processedFilePath, err := processVideoForFastStart(f.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error processing video for fast start", err)
+		return
+	}
+
+	//open processed file
+	processedFile, err := os.Open(processedFilePath)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error reading processed file", err)
+		return
+	}
+	defer os.Remove(processedFile.Name())
+	defer processedFile.Close()
 
 	//Create Random 32 byte slice and convert to hex encoded string
 	b := make([]byte, 32)
@@ -120,10 +135,11 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &fileKey,
-		Body:        f,
+		Body:        processedFile,
 		ContentType: &mediaType,
 	})
 	if err != nil {
+		log.Printf("S3 upload error: %v", err)
 		respondWithError(w, http.StatusInternalServerError, "error uploading file to s3", err)
 		return
 	}
