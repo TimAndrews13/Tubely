@@ -28,7 +28,7 @@ func processVideoForFastStart(filePath string) (string, error) {
 		return "", err
 	}
 	if info.Size() == 0 {
-		return "", fmt.Errorf("fiel is empty")
+		return "", fmt.Errorf("file is empty")
 	}
 	//return newFilePath
 	return newFilePath, nil
