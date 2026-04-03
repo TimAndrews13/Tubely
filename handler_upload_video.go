@@ -131,9 +131,9 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		fileKey = fmt.Sprintf("other/%s.%s", encodedString, fileExtension)
 	}
 
-	//Create new bucketKey
-	bucketKey := fmt.Sprintf("%s,%s", cfg.s3Bucket, fileKey)
-	video.VideoURL = &bucketKey
+	//Create new url
+	newURL := fmt.Sprintf("https://%s/%s", cfg.s3CfDistribution, fileKey)
+	video.VideoURL = &newURL
 
 	//Put video onto s3
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
@@ -151,13 +151,6 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "error updating video record url", err)
-		return
-	}
-
-	//Use presigned URL funciton to generate new video URL
-	video, err = cfg.dbVideoToSignedVideo(video)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "error creating presigned url", err)
 		return
 	}
 
